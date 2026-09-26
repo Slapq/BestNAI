@@ -23,7 +23,6 @@ RUN pip install --upgrade pip \
     && pip install -r requirements.txt
 
 COPY app ./app
-COPY frontend ./frontend
 COPY run.py ./
 COPY vendor/novelai-sdk ./novelai-sdk
 

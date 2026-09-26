@@ -15,15 +15,12 @@ from __future__ import annotations
 import asyncio
 import os
 from contextlib import asynccontextmanager
-from pathlib import Path as _Path
 from typing import AsyncGenerator
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse as _FileResponse
 from fastapi.responses import JSONResponse
-from fastapi.staticfiles import StaticFiles as _StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from .config import Settings
@@ -44,24 +41,6 @@ from .pricing_store import seed_built_in_rules
 from .routes import admin, estimate, health, launcher, legacy, native, ynai
 from .routes.deps import request_id_of
 from .scheduler import KeyScheduler
-
-_FRONTEND_DIR = _Path(__file__).resolve().parent.parent / "frontend"
-
-#: Paths that must never be served by the static frontend mount.
-_RESERVED_PREFIXES = (
-    "/native",
-    "/ai",
-    "/user",
-    "/v1",
-    "/admin",
-    "/health",
-    "/ready",
-    "/static",
-    "/docs",
-    "/redoc",
-    "/openapi.json",
-)
-
 
 def _envelope_for(path: str) -> str:
     """Select the error envelope implied by the request path."""
@@ -266,17 +245,3 @@ app.include_router(ynai.router)
 app.include_router(estimate.router)
 app.include_router(admin.router)
 app.include_router(legacy.router)
-
-
-# ── Frontend ──────────────────────────────────────────────────────────────────
-
-if _FRONTEND_DIR.exists():
-    @app.get("/")
-    async def _root() -> _FileResponse:
-        return _FileResponse(_FRONTEND_DIR / "index.html")
-
-    @app.get("/admin/ui")
-    async def _admin_ui() -> _FileResponse:
-        return _FileResponse(_FRONTEND_DIR / "admin-keys.html")
-
-    app.mount("/static", _StaticFiles(directory=str(_FRONTEND_DIR)), name="frontend")
