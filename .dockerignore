@@ -1,0 +1,11 @@
+__pycache__
+*.pyc
+*.pyo
+.git
+.gitignore
+.env.example
+docs/
+README.md
+start.bat
+*.log
+*.tmp

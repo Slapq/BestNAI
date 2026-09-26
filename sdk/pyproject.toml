@@ -1,0 +1,41 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "yesnai-sdk"
+version = "0.1.0"
+description = "Python SDK for the BestNAI / YesNAI image generation gateway"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+keywords = ["novelai", "bestnai", "yesnai", "image-generation", "sdk"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Multimedia :: Graphics",
+]
+
+dependencies = [
+    "httpx>=0.27.0",
+    "pydantic>=2.0.0",
+    "pillow>=10.0.0",
+    "msgpack>=1.0.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0.0", "pytest-asyncio>=0.23.0", "respx>=0.21.0"]
+
+[project.urls]
+Homepage = "https://example.invalid/bestnai"
+Documentation = "https://example.invalid/bestnai/docs"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/yesnai"]
+
+[tool.hatch.build.targets.sdist]
+include = ["src/yesnai", "README.md"]

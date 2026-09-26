@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BestNAI Key 管理</title>
+<style>
+body{font-family:Arial,sans-serif;background:#0d0d14;color:#e2e8f0;margin:0;padding:20px}
+.wrap{max-width:1100px;margin:0 auto}.card{background:#13131f;border:1px solid #2d2d44;border-radius:10px;padding:16px;margin-bottom:16px}
+h1{margin:0 0 12px;font-size:24px}.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:16px}
+.stat{background:#1a1a2e;border-radius:8px;padding:12px}.stat .n{font-size:24px;font-weight:700;color:#c084fc}
+.table{width:100%;border-collapse:collapse;font-size:14px}.table th,.table td{padding:10px;border-bottom:1px solid #2d2d44;text-align:left}
+.badge{display:inline-block;padding:4px 8px;border-radius:999px;font-size:12px}.on{background:#15301d;color:#4ade80}.off{background:#301515;color:#f87171}.busy{background:#3b2f12;color:#fbbf24}
+button{padding:6px 12px;border-radius:6px;border:1px solid #2d2d44;background:#1e1e30;color:#e2e8f0;cursor:pointer}button:hover{border-color:#c084fc}
+input{background:#0d0d14;border:1px solid #2d2d44;color:#e2e8f0;padding:6px 8px;border-radius:6px;width:220px}.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.msg{font-size:13px;color:#94a3b8;margin-top:8px}.error{color:#f87171}.ok{color:#4ade80}.login{max-width:420px;margin:80px auto}.hidden{display:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div id="loginBox" class="card login">
+    <h1>管理员登录</h1>
+    <div class="row">
+      <input id="token" type="password" placeholder="输入 admin secret" style="width:100%">
+    </div>
+    <div class="row" style="margin-top:10px">
+      <button onclick="saveToken()">登录</button>
+      <button onclick="clearToken()">清空</button>
+    </div>
+    <div id="msg" class="msg"></div>
+  </div>
+
+  <div id="panel" class="hidden">
+    <h1>BestNAI Key 管理</h1>
+    <div class="card">
+      <div class="row" style="margin-top:10px">
+        <input id="newKey" placeholder="新增 NovelAI API Key (pst-...)" style="width:320px">
+        <input id="newNote" placeholder="备注（可选）" style="width:220px">
+        <button onclick="addKey()">新增 Key</button>
+        <button onclick="loadKeys()">刷新</button>
+        <button onclick="clearToken()">退出登录</button>
+      </div>
+      <div id="msg2" class="msg"></div>
+    </div>
+
+    <div class="stats" id="stats"></div>
+
+    <div class="card">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>#</th><th>Key ID</th><th>Masked Key</th><th>启用</th><th>忙碌</th><th>备注</th><th>操作</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+<script>
+const API = location.origin;
+function token(){return localStorage.getItem('bestnai_admin')||''}
+function hdrs(){return {'Authorization':'Bearer '+token(),'Content-Type':'application/json'}}
+function setMsg(text, ok=true, id='msg'){const el=document.getElementById(id);el.textContent=text;el.className='msg '+(ok?'ok':'error')}
+function showPanel(ok){document.getElementById('loginBox').classList.toggle('hidden',ok);document.getElementById('panel').classList.toggle('hidden',!ok)}
+async function saveToken(){localStorage.setItem('bestnai_admin',document.getElementById('token').value.trim());await verifyAndLoad()}
+function clearToken(){localStorage.removeItem('bestnai_admin');document.getElementById('token').value='';showPanel(false);setMsg('已退出',true)}
+async function verifyAndLoad(){if(!token()){showPanel(false);return}try{const r=await fetch(API+'/admin/keys',{headers:hdrs()});const d=await r.json();if(!r.ok){showPanel(false);setMsg(d.error?.message||'认证失败',false);return}showPanel(true);renderStats(d);document.getElementById('tbody').innerHTML=d.keys.map(row).join('');setMsg('',true);setMsg('已登录',true,'msg2')}catch(e){showPanel(false);setMsg('请求失败: '+e.message,false)}}
+function renderStats(d){document.getElementById('stats').innerHTML=`<div class="stat"><div>总 Key</div><div class="n">${d.total_keys}</div></div><div class="stat"><div>空闲</div><div class="n">${d.idle_keys}</div></div><div class="stat"><div>忙碌</div><div class="n">${d.busy_keys}</div></div><div class="stat"><div>禁用</div><div class="n">${d.disabled_keys}</div></div><div class="stat"><div>排队</div><div class="n">${d.queued_requests}</div></div>`}
+function row(k){return `<tr><td>${k.index}</td><td>${k.key_id}</td><td>${k.masked_key}</td><td><span class="badge ${k.enabled?'on':'off'}">${k.enabled?'启用':'禁用'}</span></td><td><span class="badge ${k.busy?'busy':'on'}">${k.busy?'忙碌':'空闲'}</span></td><td><input value="${(k.note||'').replace(/"/g,'&quot;')}" id="note-${k.key_id}"></td><td class="row"><button onclick="toggleKey('${k.key_id}', ${!k.enabled})">${k.enabled?'禁用':'启用'}</button><button onclick="saveNote('${k.key_id}')">保存备注</button><button onclick="deleteKey('${k.key_id}')">删除</button></td></tr>`}
+async function loadKeys(){await verifyAndLoad()}
+async function addKey(){const api_key=document.getElementById('newKey').value.trim();const note=document.getElementById('newNote').value.trim();if(!api_key){setMsg('请输入 NovelAI API Key',false,'msg2');return}const r=await fetch(API+'/admin/keys',{method:'POST',headers:hdrs(),body:JSON.stringify({api_key,note})});const d=await r.json();if(!r.ok){setMsg(d.error?.message||'新增失败',false,'msg2');return}document.getElementById('newKey').value='';document.getElementById('newNote').value='';setMsg('新增成功',true,'msg2');loadKeys()}
+async function toggleKey(id, enabled){const r=await fetch(API+'/admin/keys/'+id,{method:'PATCH',headers:hdrs(),body:JSON.stringify({enabled})});const d=await r.json();if(!r.ok){setMsg(d.error?.message||'更新失败',false,'msg2');return}setMsg('状态已更新',true,'msg2');loadKeys()}
+async function saveNote(id){const note=document.getElementById('note-'+id).value;const r=await fetch(API+'/admin/keys/'+id,{method:'PATCH',headers:hdrs(),body:JSON.stringify({note})});const d=await r.json();if(!r.ok){setMsg(d.error?.message||'备注保存失败',false,'msg2');return}setMsg('备注已保存',true,'msg2');loadKeys()}
+async function deleteKey(id){if(!confirm('确定删除这个 Key 吗？忙碌中的 Key 不能删除。'))return;const r=await fetch(API+'/admin/keys/'+id,{method:'DELETE',headers:hdrs()});const d=await r.json();if(!r.ok){setMsg(d.error?.message||'删除失败',false,'msg2');return}setMsg('已删除',true,'msg2');loadKeys()}
+setInterval(()=>{if(token()&&!document.getElementById('panel').classList.contains('hidden'))loadKeys()},5000)
+document.getElementById('token').value=token();verifyAndLoad()
+</script>
+</body>
+</html>

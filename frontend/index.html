@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BestNAI</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0d0d14;--surface:#13131f;--card:#1a1a2e;--card2:#1e1e30;
+  --accent:#c084fc;--accent2:#818cf8;--text:#e2e8f0;--muted:#64748b;
+  --ok:#4ade80;--warn:#fbbf24;--err:#f87171;--border:#2d2d44;
+  --input-bg:#0d0d14;
+}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);height:100vh;overflow:hidden}
+.app{display:grid;grid-template-columns:380px 1fr;grid-template-rows:48px 1fr;height:100vh}
+@media(max-width:700px){.app{grid-template-columns:1fr;grid-template-rows:48px auto 1fr}.sidebar{max-height:50vh;overflow-y:auto}.main{min-height:0}}
+header{grid-column:1/-1;background:var(--surface);display:flex;align-items:center;padding:0 16px;gap:12px;border-bottom:1px solid var(--border);z-index:10}
+header h1{font-size:16px;font-weight:700;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.health{margin-left:auto;font-size:11px;color:var(--muted);display:flex;align-items:center;gap:6px}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--ok)}
+.dot.offline{background:var(--err)}
+.sidebar{background:var(--surface);overflow-y:auto;border-right:1px solid var(--border);display:flex;flex-direction:column}
+.sidebar::-webkit-scrollbar{width:4px}
+.sidebar::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+.tabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0}
+.tab{flex:1;padding:8px;font-size:12px;text-align:center;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;transition:.2s}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.tab-content{display:none;padding:12px;flex:1}
+.tab-content.active{display:block}
+label{display:block;font-size:11px;color:var(--muted);margin-bottom:3px;margin-top:8px}
+label:first-child{margin-top:0}
+input,select,textarea{width:100%;padding:6px 8px;background:var(--input-bg);color:var(--text);border:1px solid var(--border);border-radius:5px;font-size:12px;outline:none;transition:.15s}
+input:focus,select:focus,textarea:focus{border-color:var(--accent)}
+textarea{resize:vertical;font-family:inherit;line-height:1.5}
+.row{display:flex;gap:6px}
+.row>*{flex:1;min-width:0}
+button{padding:7px 14px;border:none;border-radius:5px;cursor:pointer;font-size:12px;font-weight:600;transition:.15s}
+.btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff}
+.btn-primary:hover{opacity:.9}
+.btn-primary:disabled{opacity:.4;cursor:not-allowed}
+.btn-sm{background:var(--card2);color:var(--text);border:1px solid var(--border);padding:4px 10px;font-size:11px}
+.btn-sm:hover{border-color:var(--accent);color:var(--accent)}
+.btn-danger{background:transparent;color:var(--err);border:1px solid var(--err);padding:3px 8px;font-size:11px}
+.actions{display:flex;gap:6px;flex-wrap:wrap;padding:12px;border-top:1px solid var(--border);flex-shrink:0}
+.actions .btn-primary{flex:1}
+.estimate-bar{padding:8px 12px;background:var(--card);border-top:1px solid var(--border);font-size:11px;display:flex;align-items:center;gap:8px;flex-shrink:0}
+.anlas-total{font-size:16px;font-weight:700;color:var(--accent)}
+.anlas-total.over{color:var(--err)}
+.anlas-detail{color:var(--muted);font-size:10px}
+.main{overflow:hidden;display:flex;flex-direction:column;background:var(--bg)}
+.preview-area{flex:1;overflow-y:auto;padding:16px;display:flex;flex-wrap:wrap;gap:12px;align-items:flex-start;justify-content:center}
+.preview-area::-webkit-scrollbar{width:4px}
+.preview-area::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+.img-card{position:relative;border-radius:8px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,.5);cursor:pointer;transition:.2s}
+.img-card:hover{transform:scale(1.01)}
+.img-card img{display:block;max-height:65vh;max-width:100%}
+.img-card .img-actions{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,.8));padding:8px;display:flex;gap:6px;opacity:0;transition:.2s}
+.img-card:hover .img-actions{opacity:1}
+.placeholder{color:var(--muted);font-size:13px;align-self:center;text-align:center;padding:40px}
+.placeholder svg{width:48px;height:48px;margin:0 auto 12px;display:block;opacity:.3}
+.log-bar{height:120px;background:var(--surface);border-top:1px solid var(--border);padding:8px 12px;font-size:10px;font-family:monospace;overflow-y:auto;color:var(--muted);flex-shrink:0}
+.log-bar::-webkit-scrollbar{width:3px}
+.log-bar::-webkit-scrollbar-thumb{background:var(--border)}
+.log-entry{line-height:1.6}
+.log-entry.err{color:var(--err)}
+.log-entry.ok{color:var(--ok)}
+.toast{position:fixed;top:56px;right:16px;padding:10px 16px;border-radius:6px;font-size:12px;z-index:999;box-shadow:0 4px 16px rgba(0,0,0,.5);animation:slideIn .2s;max-width:320px}
+.toast.info{background:var(--card2);color:var(--text);border:1px solid var(--border)}
+.toast.error{background:#2d1515;color:var(--err);border:1px solid var(--err)}
+.toast.success{background:#152d1a;color:var(--ok);border:1px solid var(--ok)}
+@keyframes slideIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:none}}
+.section-hd{font-size:11px;font-weight:600;color:var(--accent);margin:12px 0 6px;text-transform:uppercase;letter-spacing:.5px}
+.chip-group{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+.chip{padding:3px 10px;border-radius:20px;font-size:11px;cursor:pointer;border:1px solid var(--border);color:var(--muted);transition:.15s}
+.chip.active{border-color:var(--accent);color:var(--accent);background:rgba(192,132,252,.1)}
+.chip:hover{border-color:var(--accent2);color:var(--accent2)}
+.upload-zone{border:2px dashed var(--border);border-radius:6px;padding:20px;text-align:center;cursor:pointer;font-size:11px;color:var(--muted);transition:.2s;margin-top:6px}
+.upload-zone:hover,.upload-zone.drag{border-color:var(--accent);color:var(--accent);background:rgba(192,132,252,.05)}
+.ref-list{display:flex;flex-direction:column;gap:6px;margin-top:6px}
+.ref-item{background:var(--card);border:1px solid var(--border);border-radius:6px;padding:8px;display:flex;gap:8px;align-items:flex-start}
+.ref-thumb{width:48px;height:48px;border-radius:4px;object-fit:cover;flex-shrink:0;background:var(--card2)}
+.ref-info{flex:1;min-width:0}
+.ref-info .ref-name{font-size:11px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ref-info label{margin-top:4px}
+.ref-remove{color:var(--muted);cursor:pointer;font-size:14px;line-height:1;padding:2px}
+.ref-remove:hover{color:var(--err)}
+.char-item{background:var(--card);border:1px solid var(--border);border-radius:6px;padding:8px;margin-top:6px}
+.char-header{display:flex;align-items:center;gap:6px;margin-bottom:6px}
+.char-header span{font-size:11px;font-weight:600;flex:1}
+.grid-picker{display:grid;grid-template-columns:repeat(5,1fr);gap:3px;margin-top:4px}
+.grid-cell{aspect-ratio:1;border-radius:3px;border:1px solid var(--border);cursor:pointer;transition:.15s;font-size:9px;display:flex;align-items:center;justify-content:center;color:var(--muted)}
+.grid-cell:hover{border-color:var(--accent2)}
+.grid-cell.selected{background:var(--accent);border-color:var(--accent);color:#fff}
+.range-row{display:flex;align-items:center;gap:8px}
+.range-row input[type=range]{flex:1;accent-color:var(--accent)}
+.range-val{font-size:11px;color:var(--accent);min-width:28px;text-align:right}
+.progress-bar{height:3px;background:var(--border);border-radius:2px;overflow:hidden;margin-top:4px}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .3s}
+.stream-status{font-size:11px;color:var(--muted);text-align:center;padding:4px}
+</style>
+</head>
+<body>
+<div class="app">
+<header>
+  <h1>✦ BestNAI</h1>
+  <div class="health">
+    <div class="dot" id="healthDot"></div>
+    <span id="healthText">连接中...</span>
+  </div>
+</header>
+
+<div class="sidebar">
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('generate',this)">生成</div>
+
+    <div class="tab" onclick="switchTab('i2i',this)">图生图</div>
+    <div class="tab" onclick="switchTab('refs',this)">参考图</div>
+    <div class="tab" onclick="switchTab('chars',this)">角色</div>
+  </div>
+
+  <!-- TAB: 生成 -->
+  <div class="tab-content active" id="tab-generate">
+    <label>Prompt</label>
+    <textarea id="prompt" rows="4" placeholder="1girl, masterpiece...">1girl, cat ears, maid, white background, masterpiece, best quality</textarea>
+    <label>Negative Prompt</label>
+    <textarea id="negPrompt" rows="2" placeholder="可选负面提示词"></textarea>
+
+    <label>Model</label>
+    <select id="model">
+      <option value="nai-diffusion-4-5-full">NAI Diffusion 4.5 Full</option>
+      <option value="nai-diffusion-4-5-curated">NAI Diffusion 4.5 Curated</option>
+      <option value="nai-diffusion-4-full">NAI Diffusion 4 Full</option>
+      <option value="nai-diffusion-4-curated">NAI Diffusion 4 Curated</option>
+    </select>
+
+    <div class="row">
+      <div>
+        <label>Anlas 限制</label>
+        <input id="anlasLimit" type="number" value="-1" min="-1" placeholder="-1=无限">
+      </div>
+      <div>
+        <label>图像格式</label>
+        <select id="imageFormat">
+          <option value="webp">WebP</option>
+          <option value="png">PNG</option>
+        </select>
+      </div>
+    </div>
+
+    <label>尺寸</label>
+    <div class="chip-group" id="sizeChips">
+      <div class="chip active" data-val="portrait" onclick="selectChip(this,'sizeChips');scheduleEstimate()">832×1216</div>
+      <div class="chip" data-val="landscape" onclick="selectChip(this,'sizeChips');scheduleEstimate()">1216×832</div>
+      <div class="chip" data-val="square" onclick="selectChip(this,'sizeChips');scheduleEstimate()">1024×1024</div>
+      <div class="chip" data-val="large_portrait" onclick="selectChip(this,'sizeChips');scheduleEstimate()">1024×1536</div>
+      <div class="chip" data-val="large_landscape" onclick="selectChip(this,'sizeChips');scheduleEstimate()">1536×1024</div>
+      <div class="chip" data-val="large_square" onclick="selectChip(this,'sizeChips');scheduleEstimate()">1472×1472</div>
+      <div class="chip" data-val="tall" onclick="selectChip(this,'sizeChips');scheduleEstimate()">1088×1920</div>
+      <div class="chip" data-val="wide" onclick="selectChip(this,'sizeChips');scheduleEstimate()">1920×1088</div>
+      <div class="chip" data-val="small_portrait" onclick="selectChip(this,'sizeChips');scheduleEstimate()">512×768</div>
+      <div class="chip" data-val="small_landscape" onclick="selectChip(this,'sizeChips');scheduleEstimate()">768×512</div>
+      <div class="chip" data-val="small_square" onclick="selectChip(this,'sizeChips');scheduleEstimate()">640×640</div>
+    </div>
+
+    <div class="row">
+      <div>
+        <label>Steps</label>
+        <div class="range-row">
+          <input type="range" id="stepsRange" min="1" max="50" value="23" oninput="document.getElementById('stepsVal').textContent=this.value;document.getElementById('steps').value=this.value">
+          <span class="range-val" id="stepsVal">23</span>
+        </div>
+        <input type="hidden" id="steps" value="23">
+      </div>
+    </div>
+
+    <div class="row">
+      <div>
+        <label>Scale (CFG)</label>
+        <div class="range-row">
+          <input type="range" id="scaleRange" min="0" max="10" value="5" step="0.1" oninput="document.getElementById('scaleVal').textContent=parseFloat(this.value).toFixed(1);document.getElementById('scale').value=this.value">
+          <span class="range-val" id="scaleVal">5.0</span>
+        </div>
+        <input type="hidden" id="scale" value="5">
+      </div>
+    </div>
+
+    <label>Sampler</label>
+    <select id="sampler">
+      <option value="k_euler_ancestral" selected>k_euler_ancestral</option>
+      <option value="k_euler">k_euler</option>
+      <option value="k_dpmpp_2m">k_dpmpp_2m</option>
+      <option value="k_dpmpp_2s_ancestral">k_dpmpp_2s_ancestral</option>
+      <option value="k_dpmpp_sde">k_dpmpp_sde</option>
+      <option value="ddim">ddim</option>
+    </select>
+
+    <div class="row">
+      <div>
+        <label>Samples</label>
+        <input id="nSamples" type="number" value="1" min="1" max="8">
+      </div>
+      <div>
+        <label>Seed</label>
+        <input id="seed" type="number" placeholder="随机">
+      </div>
+    </div>
+
+    <label>UC Preset</label>
+    <div class="chip-group" id="ucChips">
+      <div class="chip" data-val="none" onclick="selectChip(this,'ucChips')">None</div>
+      <div class="chip active" data-val="light" onclick="selectChip(this,'ucChips')">Light</div>
+      <div class="chip" data-val="strong" onclick="selectChip(this,'ucChips')">Strong</div>
+      <div class="chip" data-val="human_focus" onclick="selectChip(this,'ucChips')">Human</div>
+      <div class="chip" data-val="furry_focus" onclick="selectChip(this,'ucChips')">Furry</div>
+    </div>
+
+    <div class="section-hd">高级</div>
+    <label>Noise Schedule</label>
+    <div class="chip-group" id="noiseChips">
+      <div class="chip active" data-val="karras" onclick="selectChip(this,'noiseChips')">Karras</div>
+      <div class="chip" data-val="exponential" onclick="selectChip(this,'noiseChips')">Exponential</div>
+      <div class="chip" data-val="polyexponential" onclick="selectChip(this,'noiseChips')">Polyexponential</div>
+    </div>
+
+    <div class="row" style="margin-top:8px">
+      <div>
+        <label>CFG Rescale</label>
+        <input id="cfgRescale" type="number" value="0" min="0" max="1" step="0.05">
+      </div>
+    </div>
+    <div class="row" style="margin-top:6px">
+      <label style="display:flex;align-items:center;gap:6px;cursor:pointer;margin:0">
+        <input type="checkbox" id="quality" checked> Quality Tags
+      </label>
+      <label style="display:flex;align-items:center;gap:6px;cursor:pointer;margin:0">
+        <input type="checkbox" id="varietyBoost"> Variety Boost
+      </label>
+    </div>
+  </div>
+
+  <!-- TAB: 图生图 -->
+  <div class="tab-content" id="tab-i2i">
+    <div class="section-hd">模式</div>
+    <div class="chip-group" id="i2iModeChips">
+      <div class="chip active" data-val="none" onclick="selectChip(this,'i2iModeChips');updateI2iMode()">文生图</div>
+      <div class="chip" data-val="i2i" onclick="selectChip(this,'i2iModeChips');updateI2iMode()">图生图</div>
+      <div class="chip" data-val="inpaint" onclick="selectChip(this,'i2iModeChips');updateI2iMode()">局部重绘</div>
+    </div>
+
+    <div id="i2iPanel" style="display:none">
+      <div class="section-hd">源图像</div>
+      <div class="upload-zone" onclick="triggerUpload('i2iFile')" ondragover="event.preventDefault();this.classList.add('drag')" ondragleave="this.classList.remove('drag')" ondrop="event.preventDefault();this.classList.remove('drag');handleI2iUpload(event.dataTransfer.files[0])">
+        <div id="i2iPreview">点击或拖拽上传源图像</div>
+        <input type="file" id="i2iFile" accept="image/*" style="display:none" onchange="handleI2iUpload(this.files[0]);this.value=''">
+      </div>
+      <label>Strength</label>
+      <div class="range-row">
+        <input type="range" id="i2iStrength" min="0.01" max="0.99" value="0.7" step="0.01" oninput="document.getElementById('i2iStrengthVal').textContent=parseFloat(this.value).toFixed(2);scheduleEstimate()">
+        <span class="range-val" id="i2iStrengthVal">0.70</span>
+      </div>
+      <label>Noise</label>
+      <div class="range-row">
+        <input type="range" id="i2iNoise" min="0" max="0.99" value="0" step="0.01" oninput="document.getElementById('i2iNoiseVal').textContent=parseFloat(this.value).toFixed(2)">
+        <span class="range-val" id="i2iNoiseVal">0.00</span>
+      </div>
+      <p style="font-size:10px;color:var(--muted);margin-top:6px">注意：SDK 会自动将输入图 resize 到目标尺寸。Anlas 按目标尺寸计算。</p>
+    </div>
+
+    <div id="inpaintPanel" style="display:none">
+      <div class="section-hd">源图像</div>
+      <div class="upload-zone" onclick="triggerUpload('inpaintFile')" ondragover="event.preventDefault()" ondrop="event.preventDefault();loadInpaintCanvas(event.dataTransfer.files[0])">
+        <div id="inpaintImgPreview">点击或拖拽上传源图像</div>
+        <input type="file" id="inpaintFile" accept="image/*" style="display:none" onchange="loadInpaintCanvas(this.files[0]);this.value=''">
+      </div>
+
+      <div id="maskEditorWrap" style="display:none;margin-top:8px">
+        <div class="section-hd">在图上涂抹要重绘的区域（白=重绘）</div>
+        <div style="position:relative;display:inline-block;border-radius:6px;overflow:hidden;border:1px solid var(--border)">
+          <canvas id="maskCanvas" style="cursor:crosshair;display:block;max-width:100%"></canvas>
+        </div>
+        <div style="display:flex;gap:6px;margin-top:6px;align-items:center;flex-wrap:wrap">
+          <label style="margin:0;font-size:11px">画笔:</label>
+          <input type="range" id="brushSize" min="5" max="80" value="30" style="width:100px" oninput="document.getElementById('brushSizeVal').textContent=this.value+'px'">
+          <span class="range-val" id="brushSizeVal" style="min-width:32px">30px</span>
+          <button class="btn-sm" onclick="maskTool='brush'" style="font-size:11px">🖌 画笔</button>
+          <button class="btn-sm" onclick="maskTool='eraser'" style="font-size:11px">🧹 橡皮</button>
+          <button class="btn-sm" onclick="clearMask()" style="font-size:11px">🗑 清除</button>
+          <button class="btn-sm" onclick="invertMask()" style="font-size:11px">🔄 反转</button>
+        </div>
+      </div>
+
+      <label>Strength</label>
+      <div class="range-row">
+        <input type="range" id="inpaintStrength" min="0.01" max="1" value="1" step="0.01" oninput="document.getElementById('inpaintStrengthVal').textContent=parseFloat(this.value).toFixed(2);scheduleEstimate()">
+        <span class="range-val" id="inpaintStrengthVal">1.00</span>
+      </div>
+      <p style="font-size:10px;color:var(--muted);margin-top:6px">白色区域=重绘，黑色区域=保留。SDK 会自动对齐到 8×8 VAE 网格。</p>
+    </div>
+  </div>
+
+  <!-- TAB: 参考图 (Vibe/CR) -->
+  <div class="tab-content" id="tab-refs">
+    <div class="section-hd">Character Reference (CR)</div>
+    <div class="upload-zone" onclick="triggerUpload('crFile')" ondragover="event.preventDefault();this.classList.add('drag')" ondragleave="this.classList.remove('drag')" ondrop="event.preventDefault();this.classList.remove('drag');addCR(event.dataTransfer.files[0])">
+      点击或拖拽添加 Character Reference
+      <input type="file" id="crFile" accept="image/*" style="display:none" onchange="addCR(this.files[0]);this.value=''">
+    </div>
+    <div class="ref-list" id="crList"></div>
+
+    <div class="section-hd" style="margin-top:16px">Vibe Transfer (ControlNet)</div>
+    <div class="upload-zone" onclick="triggerUpload('vibeFile')" ondragover="event.preventDefault();this.classList.add('drag')" ondragleave="this.classList.remove('drag')" ondrop="event.preventDefault();this.classList.remove('drag');addVibe(event.dataTransfer.files[0])">
+      点击或拖拽添加 Vibe 图像
+      <input type="file" id="vibeFile" accept="image/*" style="display:none" onchange="addVibe(this.files[0]);this.value=''">
+    </div>
+    <div class="ref-list" id="vibeList"></div>
+  </div>
+
+  <!-- TAB: 角色 -->
+  <div class="tab-content" id="tab-chars">
+    <div class="section-hd">多角色定位</div>
+    <p style="font-size:11px;color:var(--muted);margin-bottom:8px">为每个角色设置独立 prompt 和位置（官方支持的 5×5 预设：A1–E5，支持智能占位）</p>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px">
+      <button class="btn-sm" onclick="addChar()">+ 添加角色</button>
+      <button class="btn-sm" onclick="autoArrangeChars()">🧠 智能排列</button>
+    </div>
+    <div id="charList"></div>
+  </div>
+
+  <!-- Estimate bar -->
+  <div class="estimate-bar">
+    <div>
+      <div class="anlas-total" id="anlasTotal">— Anlas</div>
+      <div class="anlas-detail" id="anlasDetail">点击估算查看明细</div>
+    </div>
+    <button class="btn-sm" onclick="doEstimate()" style="margin-left:auto">估算</button>
+  </div>
+
+  <!-- Actions -->
+  <div class="actions">
+    <div style="width:100%;margin-bottom:6px">
+      <label style="display:flex;align-items:center;gap:6px;cursor:pointer;margin:0;font-size:12px">
+        <input type="checkbox" id="byokEnabled" onchange="toggleByok()"> 使用我自己的 NovelAI Key
+      </label>
+      <div id="byokPanel" style="display:none;margin-top:6px">
+        <input id="byokKey" type="password" placeholder="pst-xxxxxxxxxxxxxxxx" autocomplete="off">
+        <div style="font-size:10px;color:var(--muted);margin-top:3px">你的 Key 仅在本次请求中使用，不会被存储</div>
+      </div>
+    </div>
+    <button class="btn-primary" id="btnGenerate" onclick="doGenerate()">▶ 生成</button>
+    <button class="btn-sm" onclick="doStream()">⚡ 流式</button>
+    <button class="btn-sm" onclick="doGenerateZip()">⬇ ZIP</button>
+  </div>
+</div>
+
+<div class="main">
+  <div class="preview-area" id="previewArea">
+    <div class="placeholder">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>
+      生成结果将显示在这里
+    </div>
+  </div>
+  <div class="log-bar" id="logBar"></div>
+</div>
+</div>
+<script>
+const API = (location.origin==='null'||location.origin==='')?'http://127.0.0.1:8010':location.origin;
+const getToken=()=>localStorage.getItem('bestnai_token')||'';
+
+// ── Logging ──────────────────────────────────────────────────────────────────
+function log(msg,type=''){const el=document.getElementById('logBar');const d=document.createElement('div');d.className='log-entry '+(type||'');d.textContent=new Date().toLocaleTimeString()+' '+msg;el.appendChild(d);el.scrollTop=el.scrollHeight;}
+function toast(msg,type='info',ms=3500){const d=document.createElement('div');d.className='toast '+type;d.textContent=msg;document.body.appendChild(d);setTimeout(()=>d.remove(),ms);}
+
+// ── Health ────────────────────────────────────────────────────────────────────
+async function checkHealth(){try{const r=await fetch(`${API}/health`);const d=await r.json();document.getElementById('healthDot').className='dot';document.getElementById('healthText').textContent=`Keys ${d.idle_keys??'?'}/${d.total_keys??'?'} | Q:${d.queued_requests??'?'}`;}catch{document.getElementById('healthDot').className='dot offline';document.getElementById('healthText').textContent='离线';}}
+setInterval(checkHealth,5000);checkHealth();
+
+// ── Tabs ──────────────────────────────────────────────────────────────────────
+function switchTab(name,el){document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));el.classList.add('active');document.getElementById('tab-'+name).classList.add('active');}
+
+// ── Chips ─────────────────────────────────────────────────────────────────────
+function selectChip(el,group){document.querySelectorAll('#'+group+' .chip, .chip-group[id='+group+'] .chip').forEach(c=>c.classList.remove('active'));el.classList.add('active');}
+function getChip(group){const el=document.querySelector('[id='+group+'] .chip.active');return el?el.dataset.val:'';}
+
+// ── Size ──────────────────────────────────────────────────────────────────────
+const SIZE_MAP={portrait:[832,1216],landscape:[1216,832],square:[1024,1024],large_portrait:[1024,1536],large_landscape:[1536,1024],large_square:[1472,1472],tall:[1088,1920],wide:[1920,1088],small_portrait:[512,768],small_landscape:[768,512],small_square:[640,640]};
+function getSize(){const v=getChip('sizeChips');return SIZE_MAP[v]||[832,1216];}
+
+// ── I2I mode ──────────────────────────────────────────────────────────────────
+let i2iImageB64=null,inpaintImageB64=null,maskImageB64=null;
+function updateI2iMode(){const m=getChip('i2iModeChips');document.getElementById('i2iPanel').style.display=m==='i2i'?'block':'none';document.getElementById('inpaintPanel').style.display=m==='inpaint'?'block':'none';scheduleEstimate();}
+function triggerUpload(id){document.getElementById(id).click();}
+async function fileToB64(file){return new Promise(r=>{const fr=new FileReader();fr.onload=e=>r(e.target.result.split(',')[1]);fr.readAsDataURL(file);});}
+async function handleI2iUpload(file){if(!file)return;i2iImageB64=await fileToB64(file);const url=URL.createObjectURL(file);document.getElementById('i2iPreview').innerHTML=`<img src="${url}" style="max-height:120px;border-radius:4px">`;log('I2I 图像已加载');scheduleEstimate();}
+// ── Inpaint Canvas Mask Editor ────────────────────────────────────────────────
+let maskTool='brush',maskCtx=null,maskSourceImg=null,maskDrawing=false,maskBaseCanvas=null,maskBaseCtx=null;
+async function loadInpaintCanvas(file){if(!file)return;const url=URL.createObjectURL(file);const img=new Image();img.onload=function(){maskSourceImg=img;const maxW=340;const scale=Math.min(maxW/img.width,1);const cw=Math.round(img.width*scale),ch=Math.round(img.height*scale);const canvas=document.getElementById('maskCanvas');canvas.width=cw;canvas.height=ch;maskCtx=canvas.getContext('2d');maskCtx.clearRect(0,0,cw,ch);maskCtx.drawImage(img,0,0,cw,ch);maskBaseCanvas=document.createElement('canvas');maskBaseCanvas.width=cw;maskBaseCanvas.height=ch;maskBaseCtx=maskBaseCanvas.getContext('2d');maskBaseCtx.drawImage(img,0,0,cw,ch);document.getElementById('inpaintImgPreview').innerHTML=`<span style="color:var(--ok)">✓ 已加载 ${img.width}×${img.height}</span>`;document.getElementById('maskEditorWrap').style.display='block';setupMaskEvents(canvas);maskImageB64=null;fileToB64(file).then(b64=>{inpaintImageB64=b64;scheduleEstimate();});exportMask();log('Inpaint 源图已加载');scheduleEstimate();};img.src=url;}
+function setupMaskEvents(canvas){canvas.onmousedown=e=>{maskDrawing=true;drawMask(e);};canvas.onmousemove=e=>{if(maskDrawing)drawMask(e);};canvas.onmouseup=()=>{maskDrawing=false;exportMask();};canvas.onmouseleave=()=>{if(maskDrawing){maskDrawing=false;exportMask();}};canvas.ontouchstart=e=>{e.preventDefault();maskDrawing=true;drawMask(e.touches[0]);};canvas.ontouchmove=e=>{e.preventDefault();if(maskDrawing)drawMask(e.touches[0]);};canvas.ontouchend=()=>{maskDrawing=false;exportMask();};}
+function getCanvasPoint(e){const canvas=document.getElementById('maskCanvas');const rect=canvas.getBoundingClientRect();return[(e.clientX-rect.left)*(canvas.width/rect.width),(e.clientY-rect.top)*(canvas.height/rect.height)];}
+function drawBrushOnMask(x,y,mode='paint'){if(!maskCtx||!maskBaseCtx)return;const r=parseInt(document.getElementById('brushSize').value)/2;maskCtx.save();maskCtx.globalCompositeOperation='source-over';maskCtx.beginPath();maskCtx.arc(x,y,r,0,Math.PI*2);maskCtx.fillStyle=mode==='paint'?'rgba(255,255,255,0.7)':'rgba(0,0,0,1)';maskCtx.fill();maskCtx.restore();}
+function drawMask(e){if(!maskCtx||!maskSourceImg)return;const [x,y]=getCanvasPoint(e);drawBrushOnMask(x,y,maskTool==='brush'?'paint':'erase');exportMask();}
+function exportMask(){if(!maskCtx||!maskBaseCtx)return;const canvas=document.getElementById('maskCanvas');const w=canvas.width,h=canvas.height;const cur=maskCtx.getImageData(0,0,w,h).data;const base=maskBaseCtx.getImageData(0,0,w,h).data;const maskC=document.createElement('canvas');maskC.width=w;maskC.height=h;const mCtx=maskC.getContext('2d');const mData=mCtx.createImageData(w,h);for(let i=0;i<cur.length;i+=4){const dr=Math.abs(cur[i]-base[i]);const dg=Math.abs(cur[i+1]-base[i+1]);const db=Math.abs(cur[i+2]-base[i+2]);const diff=dr+dg+db;const v=diff>50?255:0;mData.data[i]=v;mData.data[i+1]=v;mData.data[i+2]=v;mData.data[i+3]=255;}mCtx.putImageData(mData,0,0);maskImageB64=maskC.toDataURL('image/png').split(',')[1];scheduleEstimate();}
+function clearMask(){if(!maskCtx||!maskBaseCanvas)return;maskCtx.drawImage(maskBaseCanvas,0,0);maskImageB64=null;scheduleEstimate();log('Mask 已清除');}
+function invertMask(){if(!maskCtx||!maskBaseCtx)return;const canvas=document.getElementById('maskCanvas');const w=canvas.width,h=canvas.height;const cur=maskCtx.getImageData(0,0,w,h);const base=maskBaseCtx.getImageData(0,0,w,h);for(let i=0;i<cur.data.length;i+=4){const dr=Math.abs(cur.data[i]-base.data[i]);const dg=Math.abs(cur.data[i+1]-base.data[i+1]);const db=Math.abs(cur.data[i+2]-base.data[i+2]);const diff=dr+dg+db;const makePaint=diff<=50;cur.data[i]=makePaint?255:0;cur.data[i+1]=makePaint?255:0;cur.data[i+2]=makePaint?255:0;cur.data[i+3]=255;}maskCtx.putImageData(cur,0,0);exportMask();log('Mask 已反转');}
+
+// ── Character References ──────────────────────────────────────────────────────
+const crItems=[];
+async function addCR(file){if(!file)return;const b64=await fileToB64(file);const url=URL.createObjectURL(file);crItems.push({b64,url,type:'character&style',fidelity:1.0,strength:1.0});renderCRList();log('CR 已添加');}
+function removeCR(i){crItems.splice(i,1);renderCRList();}
+function renderCRList(){const el=document.getElementById('crList');el.innerHTML=crItems.map((c,i)=>`
+<div class="ref-item">
+  <img class="ref-thumb" src="${c.url}">
+  <div class="ref-info">
+    <div class="ref-name">CR ${i+1}</div>
+    <label>Type</label>
+    <select onchange="crItems[${i}].type=this.value" style="font-size:11px;padding:3px">
+      <option value="character&style" ${c.type==='character&style'?'selected':''}>Character+Style</option>
+      <option value="character" ${c.type==='character'?'selected':''}>Character</option>
+      <option value="style" ${c.type==='style'?'selected':''}>Style</option>
+    </select>
+    <label>Fidelity: <span id="crFid${i}">${c.fidelity.toFixed(2)}</span></label>
+    <input type="range" min="0" max="1" step="0.01" value="${c.fidelity}" oninput="crItems[${i}].fidelity=parseFloat(this.value);document.getElementById('crFid${i}').textContent=parseFloat(this.value).toFixed(2)">
+    <label>Strength: <span id="crStr${i}">${c.strength.toFixed(2)}</span></label>
+    <input type="range" min="0" max="1" step="0.01" value="${c.strength}" oninput="crItems[${i}].strength=parseFloat(this.value);document.getElementById('crStr${i}').textContent=parseFloat(this.value).toFixed(2)">
+  </div>
+  <span class="ref-remove" onclick="removeCR(${i})">✕</span>
+</div>`).join('');}
+
+// ── Vibe Transfer ─────────────────────────────────────────────────────────────
+const vibeItems=[];
+async function addVibe(file){if(!file)return;const b64=await fileToB64(file);const url=URL.createObjectURL(file);vibeItems.push({b64,url,info_extracted:0.7,strength:0.6});renderVibeList();log('Vibe 已添加');}
+function removeVibe(i){vibeItems.splice(i,1);renderVibeList();}
+function renderVibeList(){const el=document.getElementById('vibeList');el.innerHTML=vibeItems.map((v,i)=>`
+<div class="ref-item">
+  <img class="ref-thumb" src="${v.url}">
+  <div class="ref-info">
+    <div class="ref-name">Vibe ${i+1}</div>
+    <label>Info Extracted: <span id="vibeInfo${i}">${v.info_extracted.toFixed(2)}</span></label>
+    <input type="range" min="0.01" max="1" step="0.01" value="${v.info_extracted}" oninput="vibeItems[${i}].info_extracted=parseFloat(this.value);document.getElementById('vibeInfo${i}').textContent=parseFloat(this.value).toFixed(2)">
+    <label>Strength: <span id="vibeStr${i}">${v.strength.toFixed(2)}</span></label>
+    <input type="range" min="0.01" max="1" step="0.01" value="${v.strength}" oninput="vibeItems[${i}].strength=parseFloat(this.value);document.getElementById('vibeStr${i}').textContent=parseFloat(this.value).toFixed(2)">
+  </div>
+  <span class="ref-remove" onclick="removeVibe(${i})">✕</span>
+</div>`).join('');}
+
+// ── Characters ────────────────────────────────────────────────────────────────
+const charItems=[];
+const GRID_LABELS=['A1','B1','C1','D1','E1','A2','B2','C2','D2','E2','A3','B3','C3','D3','E3','A4','B4','C4','D4','E4','A5','B5','C5','D5','E5'];
+const SMART_CHAR_POSITIONS=['C3','A1','E1','A5','E5','B2','D2','B4','D4','C1','C5','A3','E3','B1','D1','B5','D5','A2','E2','A4','E4','C2','C4','B3','D3'];
+function addChar(){charItems.push({prompt:'',negative_prompt:'',position:'auto',enabled:true});renderCharList();scheduleEstimate();}
+function removeChar(i){charItems.splice(i,1);renderCharList();scheduleEstimate();}
+function selectCharPos(i,x,y,el){charItems[i].position=[x,y];el.closest('.grid-picker').querySelectorAll('.grid-cell').forEach(c=>c.classList.remove('selected'));el.classList.add('selected');scheduleEstimate();}
+function autoArrangeChars(){const active=charItems.filter(c=>c.enabled!==false);active.forEach((c,idx)=>{c.position=SMART_CHAR_POSITIONS[idx%SMART_CHAR_POSITIONS.length];});renderCharList();scheduleEstimate();toast('已自动排列角色位置','success');}
+function _posLabelToCoord(label){if(label==='auto'||label===null||label===undefined)return null;if(Array.isArray(label))return label;const s=String(label).toUpperCase();const col='ABCDE'.indexOf(s[0]);const row='12345'.indexOf(s[1]);if(col<0||row<0)return null;return[(col+0.5)/5,(row+0.5)/5];}
+function _posCoordToLabel(pos){if(Array.isArray(pos)){const x=Math.max(0,Math.min(0.999,pos[0])),y=Math.max(0,Math.min(0.999,pos[1]));const col=Math.min(4,Math.max(0,Math.floor(x*5)));const row=Math.min(4,Math.max(0,Math.floor(y*5)));return String.fromCharCode(65+col)+(row+1);}return pos==='auto'?'auto':String(pos);} 
+function _resolveCharPosition(c, idx){const pos=c.position;const label=_posCoordToLabel(_posLabelToCoord(pos)||pos);if(label==='auto'||!GRID_LABELS.includes(label))return SMART_CHAR_POSITIONS[idx%SMART_CHAR_POSITIONS.length];return label;}
+function renderCharList(){const el=document.getElementById('charList');el.innerHTML=charItems.map((c,i)=>{const coord=_posLabelToCoord(c.position);const isAuto=!coord&&c.position==='auto';const currentLabel=isAuto?'智能占位('+SMART_CHAR_POSITIONS[i%SMART_CHAR_POSITIONS.length]+')':_posCoordToLabel(coord||c.position);return`<div class="char-item"><div class="char-header"><span>角色 ${i+1} [${currentLabel}]</span><div style="display:flex;gap:6px"><button class="btn-danger" onclick="removeChar(${i})">✕</button></div></div><label>Prompt</label><textarea rows="2" oninput="charItems[${i}].prompt=this.value;scheduleEstimate()" placeholder="角色描述...">${c.prompt}</textarea><label>Negative</label><textarea rows="1" oninput="charItems[${i}].negative_prompt=this.value;scheduleEstimate()" placeholder="负面...">${c.negative_prompt}</textarea><label>位置（5×5 网格）</label><div class="grid-picker">${Array.from({length:25},(_,k)=>{const col=k%5,row=Math.floor(k/5);const x=(col+0.5)/5,y=(row+0.5)/5;const resolvedCoord=coord||_posLabelToCoord(SMART_CHAR_POSITIONS[i%SMART_CHAR_POSITIONS.length]);const sel=resolvedCoord?Math.abs(resolvedCoord[0]-x)<0.01&&Math.abs(resolvedCoord[1]-y)<0.01:false;return`<div class="grid-cell${sel?' selected':''}" onclick="selectCharPos(${i},${x},${y},this)">${String.fromCharCode(65+col)}${row+1}</div>`}).join('')}</div><div style="display:flex;gap:6px;margin-top:6px;align-items:center;justify-content:space-between"><span style="font-size:10px;color:var(--muted)">当前: ${currentLabel}</span><button class="btn-sm" onclick="charItems[${i}].position='auto';renderCharList();scheduleEstimate()">智能占位</button></div></div>`;}).join('');}
+
+// ── Build payload ─────────────────────────────────────────────────────────────
+function buildPayload(){const size=getSize();const p={prompt:document.getElementById('prompt').value,model:(()=>{const m=document.getElementById('model').value;const l=parseInt(document.getElementById('anlasLimit').value);return l>=0?`${m}-anlas-${l}`:m;})(),size,steps:parseInt(document.getElementById('steps').value),scale:Math.min(10,Math.max(0,parseFloat(document.getElementById('scale').value)||5)),sampler:document.getElementById('sampler').value,n_samples:parseInt(document.getElementById('nSamples').value)||1,quality:document.getElementById('quality').checked,uc_preset:getChip('ucChips')||'light',noise_schedule:getChip('noiseChips')||'karras',cfg_rescale:parseFloat(document.getElementById('cfgRescale').value)||0,variety_boost:document.getElementById('varietyBoost').checked,image_format:document.getElementById('imageFormat').value};const neg=document.getElementById('negPrompt').value.trim();if(neg)p.negative_prompt=neg;const seed=document.getElementById('seed').value.trim();if(seed)p.seed=parseInt(seed);const i2iMode=getChip('i2iModeChips');if(i2iMode==='i2i'&&i2iImageB64){p.i2i={image:i2iImageB64,strength:parseFloat(document.getElementById('i2iStrength').value),noise:parseFloat(document.getElementById('i2iNoise').value)};}if(i2iMode==='inpaint'&&inpaintImageB64&&maskImageB64){p.inpaint={image:inpaintImageB64,mask:maskImageB64,strength:parseFloat(document.getElementById('inpaintStrength').value)};}if(crItems.length)p.character_references=crItems.map(c=>({image:c.b64,type:c.type,fidelity:c.fidelity,strength:c.strength}));if(vibeItems.length)p.controlnet={images:vibeItems.map(v=>({image:v.b64,info_extracted:v.info_extracted,strength:v.strength}))};const chars=charItems.map((c,i)=>({prompt:c.prompt,negative_prompt:c.negative_prompt,position:_resolveCharPosition(c,i),enabled:c.enabled!==false}));if(chars.length)p.characters=chars;return p;}
+
+function hdrs(json=true){const h={};const t=getToken();if(t)h['Authorization']=`Bearer ${t}`;if(json)h['Content-Type']='application/json';return h;}
+
+// ── Estimate ──────────────────────────────────────────────────────────────────
+async function doEstimate(){log('估算中...');try{const ep=isByok()?'/v1/estimate/byok':'/v1/estimate/high-level';const h=isByok()?hdrsWithByok():hdrs();const r=await fetch(`${API}${ep}`,{method:'POST',headers:h,body:JSON.stringify(buildPayload())});const d=await r.json();if(!r.ok){toast(d.error?.message||'估算失败','error');log('估算失败: '+d.error?.message,'err');return;}const ea=d.estimated_anlas;const over=!d.allowed;document.getElementById('anlasTotal').className='anlas-total'+(over?' over':'');document.getElementById('anlasTotal').textContent=ea.total+' Anlas '+(over?'✗ 超限':'✓');const _mode=getChip('i2iModeChips');let _detail=`基础:${ea.base} CR:${ea.character_reference} Vibe编:${ea.vibe_encoding} Vibe引:${ea.vibe_reference} Opus:${ea.opus_discount_applied?'✓':'✗'}`;if(_mode==='i2i')_detail+=` | Strength×${ea.strength_factor.toFixed(2)} [图生图]`;if(_mode==='inpaint')_detail+=` | Strength×${ea.strength_factor.toFixed(2)} [局部重绘]`;if(isByok())_detail+=' [自带Key]';document.getElementById('anlasDetail').textContent=_detail;log(`估算: ${ea.total} anlas | 模型: ${d.resolved_model}`,'ok');}catch(e){toast('估算失败','error');log('Error: '+e.message,'err');}}
+
+// ── BYOK ─────────────────────────────────────────────────────────────────────
+function toggleByok(){const on=document.getElementById('byokEnabled').checked;document.getElementById('byokPanel').style.display=on?'block':'none';}
+function isByok(){return document.getElementById('byokEnabled').checked;}
+function byokKey(){return document.getElementById('byokKey').value.trim();}
+function hdrsWithByok(json=true){const h=hdrs(json);const k=byokKey();if(isByok()&&k)h['X-NAI-Key']=k;return h;}
+function genEndpoint(stream=false){return isByok()?(stream?'/v1/generate/byok-stream':'/v1/generate/byok'):(stream?'/v1/generate/high-level-stream':'/v1/generate/high-level');}
+
+// ── Generate ──────────────────────────────────────────────────────────────────
+async function doGenerate(){const btn=document.getElementById('btnGenerate');btn.disabled=true;btn.textContent='生成中...';log('生成中...');try{const fmt=document.getElementById('imageFormat').value;const r=await fetch(`${API}${genEndpoint()}?return_format=json&image_format=${fmt}`,{method:'POST',headers:hdrsWithByok(),body:JSON.stringify(buildPayload())});if(!r.ok){const e=await r.json();toast(e.error?.message||'生成失败','error');log('失败: '+e.error?.message,'err');return;}const d=await r.json();renderImages(d.images,d.image_format);log(`完成: ${d.images.length} 张 ${d.image_format}`,'ok');}catch(e){toast('生成失败','error');log('Error: '+e.message,'err');}finally{btn.disabled=false;btn.textContent='▶ 生成';}}
+
+function renderImages(images,fmt){const area=document.getElementById('previewArea');area.innerHTML=images.map((b64,i)=>`<div class="img-card"><img src="data:image/${fmt};base64,${b64}"><div class="img-actions"><button class="btn-sm" onclick="downloadImg('${b64}','${fmt}',${i})">⬇ 下载</button></div></div>`).join('');}
+function downloadImg(b64,fmt,i){const a=document.createElement('a');a.href=`data:image/${fmt};base64,${b64}`;a.download=`bestnai_${Date.now()}_${i}.${fmt}`;a.click();}
+
+// ── ZIP ───────────────────────────────────────────────────────────────────────
+async function doGenerateZip(){log('ZIP 生成中...');try{const r=await fetch(`${API}${genEndpoint()}?return_format=zip&image_format=png`,{method:'POST',headers:hdrsWithByok(),body:JSON.stringify(buildPayload())});if(!r.ok){const e=await r.json();toast(e.error?.message||'失败','error');return;}const blob=await r.blob();const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`bestnai_${Date.now()}.zip`;a.click();URL.revokeObjectURL(url);log('ZIP 下载完成','ok');}catch(e){toast('ZIP 失败','error');log('Error: '+e.message,'err');}}
+
+let _streamSeq=0;
+function _setStreamStatus(text){const el=document.getElementById('streamStatus');if(el)el.textContent=text;}
+function _setProgress(pct){const el=document.getElementById('progressFill');if(el)el.style.width=Math.max(0,Math.min(100,pct))+'%';}
+function _renderStreamImage(b64,fmt='png'){const area=document.getElementById('previewArea');area.innerHTML=`<div class="img-card"><img src="data:image/${fmt};base64,${b64}"><div class="img-actions"><button class="btn-sm" onclick="downloadImg('${b64}','${fmt}',0)">⬇ 下载</button></div></div><div class="stream-status">生成中…</div><div class="progress-bar" style="width:200px;margin:0 auto"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>`;}
+
+// ── Stream ────────────────────────────────────────────────────────────────────
+async function doStream(){log('流式生成中...');const area=document.getElementById('previewArea');area.innerHTML='<div class="placeholder"><div class="stream-status" id="streamStatus">等待流式数据...</div><div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0"></div></div></div>';const seq=++_streamSeq;let errNext=false;try{const r=await fetch(`${API}${genEndpoint(true)}`,{method:'POST',headers:hdrsWithByok(),body:JSON.stringify(buildPayload())});if(!r.ok){const e=await r.json();toast(e.error?.message||'流式失败','error');return;}const reader=r.body.getReader();const dec=new TextDecoder();let buf='';while(true){const{done,value}=await reader.read();if(done)break;buf+=dec.decode(value,{stream:true});const lines=buf.split('\n');buf=lines.pop()||'';for(const line of lines){if(seq!==_streamSeq)return;if(errNext&&line.startsWith('data: ')){try{const e=JSON.parse(line.slice(6));toast(e.error?.message||'流式错误','error');}catch{}errNext=false;continue;}if(line==='event: error'){errNext=true;continue;}if(line.startsWith('data: ')){try{const chunk=JSON.parse(line.slice(6));const pct=chunk.step_ix>=0?Math.round((chunk.step_ix+1)/Math.max(1,parseInt(document.getElementById('steps').value))*100):100;_renderStreamImage(chunk.image,'png');_setStreamStatus(`${chunk.event_type==='final'?'完成':'生成中…'} step ${chunk.step_ix}`);_setProgress(pct);if(chunk.event_type==='final'){log('流式完成','ok');}}catch{}}}}}catch(e){toast('流式失败','error');log('Error: '+e.message,'err');}}
+// ── 实时估算 ──────────────────────────────────────────────────────────────────
+let _estTimer=null;
+function scheduleEstimate(){clearTimeout(_estTimer);_estTimer=setTimeout(doEstimate,600);}
+// 监听所有影响估算的输入
+document.querySelectorAll('#prompt,#negPrompt,#model,#anlasLimit,#nSamples,#seed,#cfgRescale,#imageFormat').forEach(el=>el.addEventListener('input',scheduleEstimate));
+document.querySelectorAll('#stepsRange,#scaleRange,#i2iStrength,#inpaintStrength,#brushSize').forEach(el=>el.addEventListener('input',scheduleEstimate));
+document.querySelectorAll('#quality,#varietyBoost').forEach(el=>el.addEventListener('change',scheduleEstimate));
+// chip 点击后也触发
+const _origSelectChip=selectChip;
+window.selectChip=function(el,group){_origSelectChip(el,group);scheduleEstimate();};
+// 初始估算
+scheduleEstimate();
+
+if(!getToken()){const t=prompt('输入 BestNAI Client Secret（留空跳过）:');if(t){localStorage.setItem('bestnai_token',t);location.reload();}}
+</script>
+</body></html>
