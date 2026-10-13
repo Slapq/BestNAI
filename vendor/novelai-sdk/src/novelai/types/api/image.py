@@ -98,7 +98,7 @@ class ImageParameters(BaseModel):
     No automatic processing (quality tags, UC presets, v4 prompt conversion) is performed.
     """
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="allow")
 
     # Basic parameters
     width: int | None = Field(
@@ -264,7 +264,7 @@ class BaseImageGenerationRequest(BaseModel):
     This mirrors the NovelAI REST API exactly without any automatic processing.
     """
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="allow")
 
     action: str | None = Field(
         default=None, description="Action type (generate, img2img, infill, etc.)"
