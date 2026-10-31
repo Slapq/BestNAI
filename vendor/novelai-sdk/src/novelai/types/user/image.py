@@ -361,6 +361,10 @@ class GenerateImageParams(BaseModel):
     @staticmethod
     def is_v4(model: ImageModel) -> bool:
         return model in [
+            "nai-diffusion-5-full",
+            "nai-diffusion-5-curated",
+            "nai-diffusion-5-full-inpainting",
+            "nai-diffusion-5-curated-inpainting",
             "nai-diffusion-4-5-full",
             "nai-diffusion-4-5-curated",
             "nai-diffusion-4-full",
@@ -374,6 +378,10 @@ class GenerateImageParams(BaseModel):
     @staticmethod
     def is_v4_5(model: ImageModel) -> bool:
         return model in [
+            "nai-diffusion-5-full",
+            "nai-diffusion-5-curated",
+            "nai-diffusion-5-full-inpainting",
+            "nai-diffusion-5-curated-inpainting",
             "nai-diffusion-4-5-full",
             "nai-diffusion-4-5-curated",
             "nai-diffusion-4-5-full-inpainting",
